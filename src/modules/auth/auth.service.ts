@@ -1,6 +1,8 @@
+import config from "../../config";
 import { pool } from "../../db";
 import type { UserPayload } from "../../types";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const createUserInDB = async (payload: UserPayload) => {
   const { name, email, password, role } = payload;
@@ -21,6 +23,55 @@ const createUserInDB = async (payload: UserPayload) => {
   return result.rows[0];
 };
 
+const loginUserInDB = async (payload: { email: string; password: string }) => {
+  const { email, password } = payload;
+
+  const userData = await pool.query(
+    `
+        SELECT * FROM users WHERE email=$1    
+    `,
+    [email],
+  );
+
+  if (userData.rows.length === 0) {
+    throw new Error("Invalid credentials");
+  }
+
+  const user = userData.rows[0];
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    throw new Error("Invalid credentials");
+  }
+
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    role: user.role,
+  };
+
+  const accessToken = jwt.sign(
+    jwtPayload,
+    config.access_token_secret as string,
+    {
+      expiresIn: "1d",
+    },
+  );
+
+  return {
+    accessToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    },
+  };
+};
+
 export const authService = {
   createUserInDB,
+  loginUserInDB,
 };

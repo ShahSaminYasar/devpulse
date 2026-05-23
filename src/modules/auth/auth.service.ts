@@ -19,9 +19,8 @@ const createUserInDB = async (payload: UserPayload) => {
     [name, email, hashedPassword, role],
   );
 
-  delete result.rows[0].password;
-
-  return result.rows[0];
+  const { password: userPassword, ...userWithoutPassword } = result.rows[0];
+  return userWithoutPassword;
 };
 
 const loginUserInDB = async (payload: { email: string; password: string }) => {

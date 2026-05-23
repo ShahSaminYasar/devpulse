@@ -1,6 +1,6 @@
-import { pool } from "../../../db";
-import type { IssuePayload } from "../../../types";
-import AppError from "../../../utility/appError";
+import { pool } from "../../db";
+import type { IssuePayload } from "../../types";
+import AppError from "../../utility/appError";
 
 const createIssueInDB = async (payload: IssuePayload) => {
   const { title, description, type, userId } = payload;

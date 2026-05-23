@@ -16,6 +16,79 @@ const createIssueInDB = async (payload: IssuePayload) => {
   return result;
 };
 
+const getIssuesFromDB = async (
+  sort: string,
+  type: string | null | undefined,
+  status: string | null | undefined,
+) => {
+  const conditions: string[] = [];
+  const values: string[] = [];
+
+  if (type) {
+    values.push(type);
+    conditions.push(`type=$${values.length}`);
+  }
+
+  if (status) {
+    values.push(status);
+    conditions.push(`status=$${values.length}`);
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions?.join(" AND ")}`
+    : "";
+
+  const orderClause =
+    sort === "oldest" ? "ORDER BY created_at ASC" : "ORDER BY created_at DESC";
+
+  const result = await pool.query(
+    `
+        SELECT * FROM issues ${whereClause} ${orderClause}
+        `,
+    values,
+  );
+
+  if (result.rows.length === 0) return [];
+
+  const reporterIds = [
+    ...new Set(result.rows.map((issue) => issue.reporter_id)),
+  ];
+
+  const reportersData = await pool.query(
+    `
+        SELECT id, name, role FROM users WHERE id=ANY($1)
+        `,
+    [reporterIds],
+  );
+
+  const finalData: {
+    id: number;
+    title: string;
+    description: string;
+    type: string;
+    status: string;
+    reporter: {
+      id: number;
+      name: string;
+      role: string;
+    };
+    created_at: Date;
+    updated_at: Date;
+  }[] = [];
+
+  result.rows.forEach((issue) => {
+    const reporter = reportersData.rows.find((r) => r.id === issue.reporter_id);
+    issue.reporter = reporter
+      ? { id: reporter.id, name: reporter.name, role: reporter.role }
+      : null;
+    const { reporter_id, ...issueData } = issue;
+    finalData.push(issueData);
+  });
+
+  return finalData;
+};
+
 export const issueService = {
   createIssueInDB,
+  getIssuesFromDB,
 };

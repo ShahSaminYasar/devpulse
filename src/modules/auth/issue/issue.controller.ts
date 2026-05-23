@@ -152,9 +152,37 @@ const updateIssue = async (req: Request, res: Response) => {
   }
 };
 
+const deleteIssue = async (req: Request, res: Response) => {
+  try {
+    await issueService.deleteIssueFromDB(Number(req.params.id));
+
+    return res.status(200).json({
+      success: true,
+      message: "Issue deleted successfully",
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return sendResponse(res, {
+        statusCode: error.statusCode,
+        success: false,
+        message: error.message,
+        errors: error.message,
+      });
+    }
+
+    sendResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Internal server error",
+      errors: "Internal server error",
+    });
+  }
+};
+
 export const issueController = {
   createIssue,
   getIssues,
   getIssueById,
   updateIssue,
+  deleteIssue,
 };

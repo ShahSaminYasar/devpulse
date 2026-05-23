@@ -1,5 +1,6 @@
 import { pool } from "../../../db";
 import type { IssuePayload } from "../../../types";
+import AppError from "../../../utility/appError";
 
 const createIssueInDB = async (payload: IssuePayload) => {
   const { title, description, type, userId } = payload;
@@ -116,8 +117,50 @@ const getIssueByIdFromDB = async (id: number) => {
   return issueWithoutReporterId;
 };
 
+const updateIssueInDB = async (
+  payload: IssuePayload,
+  issueId: number,
+  userId: number,
+  userRole: string,
+) => {
+  const { title, description, type } = payload;
+
+  const targetIssue = await pool.query(`SELECT * FROM issues WHERE id=$1`, [
+    issueId,
+  ]);
+
+  if (targetIssue.rows.length === 0) throw new AppError("Issue not found", 404);
+
+  if (userRole !== "maintainer") {
+    if (targetIssue.rows[0].reporter_id !== userId) {
+      throw new AppError("Forbidden", 403);
+    } else {
+      if (targetIssue.rows[0].status !== "open") {
+        throw new AppError("Only open issues can be updated", 409);
+      }
+    }
+  }
+
+  const result = await pool.query(
+    `
+    UPDATE issues
+    SET
+    title=COALESCE($1, title),
+    description=COALESCE($2, description),
+    type=COALESCE($3, type),
+    updated_at=NOW()
+    WHERE id=$4
+    RETURNING *
+    `,
+    [title, description, type, issueId],
+  );
+
+  return result.rows[0];
+};
+
 export const issueService = {
   createIssueInDB,
   getIssuesFromDB,
   getIssueByIdFromDB,
+  updateIssueInDB,
 };

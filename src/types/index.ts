@@ -4,3 +4,5 @@ export type UserPayload = {
   password: string;
   role: string;
 };
+
+export type Roles = "contributor" | "maintainer";

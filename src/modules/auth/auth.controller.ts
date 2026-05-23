@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { authService } from "./auth.service";
 import sendResponse from "../../utility/sendResponse";
 import catchDbError from "../../utility/catchDBError";
+import AppError from "../../utility/appError";
 
 const signUpUser = async (req: Request, res: Response) => {
   try {
@@ -40,12 +41,20 @@ const signInUser = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    const { statusCode, message } = catchDbError(error);
+    if (error instanceof AppError) {
+      return sendResponse(res, {
+        statusCode: error.statusCode,
+        success: false,
+        message: error.message,
+        errors: error.message,
+      });
+    }
+
     sendResponse(res, {
-      statusCode,
+      statusCode: 500,
       success: false,
-      message,
-      errors: message,
+      message: "Internal server error",
+      errors: "Internal server error",
     });
   }
 };

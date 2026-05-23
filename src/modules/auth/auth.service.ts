@@ -3,6 +3,7 @@ import { pool } from "../../db";
 import type { UserPayload } from "../../types";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import AppError from "../../utility/appError";
 
 const createUserInDB = async (payload: UserPayload) => {
   const { name, email, password, role } = payload;
@@ -34,14 +35,14 @@ const loginUserInDB = async (payload: { email: string; password: string }) => {
   );
 
   if (userData.rows.length === 0) {
-    throw new Error("Invalid credentials");
+    throw new AppError("Invalid credentials", 401);
   }
 
   const user = userData.rows[0];
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
-    throw new Error("Invalid credentials");
+    throw new AppError("Invalid credentials", 401);
   }
 
   const jwtPayload = {
